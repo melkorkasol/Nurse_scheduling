@@ -1,0 +1,31 @@
+nurse_id,role,contract_pct,night_eligible,years_experience,shift_preference,contracted_weekly_hours,hourly_wage_dkk
+N001,SoSu,100,Yes,8.8,Evening,37.0,145.46
+N002,RN,50,No,6.9,Day,18.5,179.57
+N003,RN,80,Yes,4.3,Day,29.6,171.56
+N004,SoSu,70,Yes,5.7,No preference,25.9,137.19
+N005,SoSu,100,Yes,6.4,No preference,37.0,138.88
+N006,SoSu,30,No,3.2,No preference,11.1,131.19
+N007,RN,50,No,2.1,No preference,18.5,164.78
+N008,SoSu,70,No,10.0,Day,25.9,149.56
+N009,SoSu,100,Yes,10.2,No preference,37.0,150.24
+N010,RN,80,Yes,11.9,Day,29.6,200.05
+N011,SoSu,100,Yes,4.6,Day,37.0,134.55
+N012,SoSu,100,Yes,5.3,Day,37.0,136.23
+N013,RN,70,Yes,10.7,No preference,25.9,194.79
+N014,RN,70,No,4.0,Evening,25.9,170.63
+N015,SoSu,30,No,2.4,Day,11.1,129.27
+N016,RN,100,Yes,2.3,Day,37.0,165.4
+N017,RN,100,Yes,2.9,No preference,37.0,167.25
+N018,RN,80,Yes,5.3,No preference,29.6,174.64
+N019,RN,100,Yes,10.1,Night,37.0,192.16
+N020,SoSu,100,Yes,4.3,No preference,37.0,133.83
+N021,RN,80,Yes,8.4,No preference,29.6,184.71
+N022,RN,100,Yes,1.5,Day,37.0,162.93
+N023,RN,70,Yes,7.5,Day,25.9,181.41
+N024,SoSu,100,Yes,7.6,Night,37.0,141.76
+N025,RN,50,No,8.0,No preference,18.5,182.95
+N026,RN,70,No,12.8,Day,25.9,204.0
+N027,SoSu,100,Yes,12.7,No preference,37.0,158.8
+N028,RN,50,Yes,7.8,Day,18.5,182.34
+N029,RN,50,Yes,1.1,Day,18.5,161.7
+N030,RN,100,Yes,7.9,No preference,37.0,182.65
