@@ -52,7 +52,7 @@ const QUARTER_START = Dict(
 # 1. LOAD DATA
 # ---------------------------------------------------------------------------
 # ASSUMPTION: adjust this path to wherever your files actually live.
-const DATA_DIR = raw"C:\Users\Melkorka Sól\Grundargengið Dropbox\Melkorka Sol Petursdottir\Jobs\SpecialProject\Portfolio"
+const DATA_DIR = "."
 
 nurses_df   = CSV.read(joinpath(DATA_DIR, "nurse_profiles.csv"), DataFrame)
 vacation_df = CSV.read(joinpath(DATA_DIR, "vacation_days_scenario$(QUARTER).csv"), DataFrame)

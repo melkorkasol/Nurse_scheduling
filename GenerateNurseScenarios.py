@@ -37,7 +37,7 @@ SCENARIO_START = dt.date(2024, 12, 30)  # Monday, ISO week 1 of 2025
 WEEKS_PER_SCENARIO = 13
 N_SCENARIOS = 4
 
-OUTPUT_DIR = r"C:\Users\Melkorka Sól\Grundargengið Dropbox\Melkorka Sol Petursdottir\Jobs\SpecialProject"
+OUTPUT_DIR = "."
 # ---------------------------------------------------------------------------
 # 1. Shared nurse population — generated once, reused across all scenarios
 #    (identical logic/parameters to the original single-scenario script)
