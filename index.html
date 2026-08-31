@@ -32,8 +32,7 @@
     A quarterly nurse rostering tool for a synthetic 30-nurse Danish hospital ward,
     built as a mixed-integer linear program (MILP) grounded in real Danish labour
     law wherever possible. This page explains what the model actually decides, what
-    every constraint is based on, and — just as importantly — where the numbers are
-    genuine assumptions rather than sourced facts.
+    every constraint is based on, and where the numbers are assumptions rather than sourced facts.
   </p>
 
   <div class="prose-section">
@@ -62,8 +61,7 @@
     <p>
       These are non-negotiable rules the model can never violate. Wherever
       possible they're pulled directly from the real Danish overenskomst (OK-24,
-      the collective agreement between Dansk Sygeplejeråd and Danske Regioner),
-      not generic textbook assumptions.
+      the collective agreement between Dansk Sygeplejeråd and Danske Regioner).
     </p>
     <ul>
       <li><strong>11-hour rest rule</strong> between shifts, with an 8-hour
@@ -119,15 +117,13 @@
       The overenskomst's actual default reference period ("normperiode") is 14
       weeks if no local agreement is reached. This project deliberately uses
       13-week calendar-aligned quarters instead, for cleaner "one roster per
-      quarter" portfolio framing &mdash; a conscious deviation from the sourced
-      default, not an oversight.
+      quarter" portfolio framing.
     </div>
     <div class="assumption-box">
       <strong>RN headcount runs close to its coverage limit.</strong>
       The RN coverage rule demands more RN-hours per week than the 18 RNs'
       contracted hours alone can supply. A &plusmn;15% overtime tolerance band
-      is what makes the model feasible at all &mdash; independently verified
-      computationally, not just assumed. Anything below roughly 12.1% tolerance
+      is what makes the model feasible. Anything below approximately 12% tolerance
       is mathematically infeasible regardless of solver settings.
     </div>
     <div class="assumption-box">
@@ -141,10 +137,9 @@
       A 2023 EU Commission-funded project at an actual Danish hospital
       (Regionshospitalet G&oslash;dstrup) found that real evidence-based staffing
       should flex with actual patient acuity, not a fixed daily headcount. This
-      model uses fixed targets (8/5/3) &mdash; closer to the "traditional"
+      model uses fixed targets (8/5/3),  closer to the "traditional"
       method that report explicitly critiques than to the evidence-based
-      alternative it recommends. That's a genuine scope boundary, not a hidden
-      flaw.
+      alternative it recommends.
     </div>
   </div>
 
