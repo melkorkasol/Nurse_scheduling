@@ -49,26 +49,30 @@
   header .sub{ font-size:13px; color:var(--forest-mid); }
 
   .layout{
-    display:grid;
-    grid-template-columns:320px 1fr;
-    min-height:calc(100vh - 73px);
-  }
-  @media (max-width:900px){ .layout{ grid-template-columns:1fr; } }
-
-  /* ---------- CONTROL PANEL ---------- */
-  .control-panel{
-    background:rgba(83,198,136,0.08);
-    border-right:1px solid rgba(24,48,23,0.15);
-    padding:24px;
     display:flex;
     flex-direction:column;
-    gap:22px;
+  }
+
+  /* ---------- CONTROL PANEL (horizontal parameter bar) ---------- */
+  .control-panel{
+    background:rgba(83,198,136,0.08);
+    border-bottom:1px solid rgba(24,48,23,0.15);
+    padding:20px 32px;
+    display:flex;
+    flex-direction:column;
+    gap:16px;
+  }
+  .param-row{
+    display:flex;
+    flex-wrap:wrap;
+    align-items:flex-end;
+    gap:28px;
   }
   .panel-section{
-    border-bottom:1px solid rgba(24,48,23,0.10);
-    padding-bottom:20px;
+    border-right:1px solid rgba(24,48,23,0.12);
+    padding-right:28px;
   }
-  .panel-section:last-of-type{ border-bottom:none; }
+  .panel-section:last-of-type{ border-right:none; padding-right:0; }
   .panel-label{
     font-size:11px;
     text-transform:uppercase;
@@ -78,7 +82,7 @@
     margin-bottom:12px;
     display:block;
   }
-  .field{ margin-bottom:14px; }
+  .field{ margin-bottom:14px; min-width:150px; }
   .field:last-child{ margin-bottom:0; }
   .field label{
     display:block;
@@ -91,7 +95,7 @@
   .value-readout{ color:var(--forest-mid); font-weight:700; }
 
   input[type="number"], input[type="date"], select{
-    width:100%;
+    width:120px;
     background:#FFFFFF;
     border:1px solid rgba(24,48,23,0.25);
     color:var(--forest);
@@ -104,6 +108,7 @@
     -moz-appearance:none;
     color-scheme:light;
   }
+  #quarterSelect{ width:280px; }
   select{
     padding-right:32px;
     background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0L5 6L10 0' fill='none' stroke='%23183017' stroke-width='1.5'/%3E%3C/svg%3E");
@@ -133,16 +138,16 @@
   }
 
   .generate-btn{
-    width:100%;
     background:var(--green);
     color:var(--forest);
     border:none;
-    padding:13px;
+    padding:13px 28px;
     border-radius:var(--radius);
     font-family:inherit;
     font-weight:700;
     font-size:14px;
     cursor:pointer;
+    white-space:nowrap;
   }
   .generate-btn:hover{ background:var(--forest-mid); color:var(--pale); }
   .generate-btn:disabled{ background:rgba(24,48,23,0.10); color:rgba(24,48,23,0.4); cursor:not-allowed; }
@@ -280,63 +285,58 @@
 
 <div class="layout">
 
-  <!-- ================= CONTROL PANEL ================= -->
-  <aside class="control-panel">
+  <!-- ================= CONTROL PANEL (horizontal parameter bar) ================= -->
+  <div class="control-panel">
 
-    <div class="panel-section">
-      <span class="panel-label">Yearly Quarters</span>
-      <div class="field">
-        <label for="quarterSelect">Select a quarter</label>
-        <select id="quarterSelect"></select>
-      </div>
-      <div class="field" style="margin-bottom:0;">
-        <div id="quarterInfo" style="font-size:12px; color:var(--forest-mid); line-height:1.5;"></div>
-      </div>
-    </div>
+    <div class="param-row">
 
-    <div class="panel-section">
-      <span class="panel-label">02 — Roster Period</span>
-      <div class="field-row">
+      <div class="panel-section">
+        <span class="panel-label">Yearly Quarters</span>
         <div class="field">
-          <label>Start date</label>
-          <input type="date" id="startDate" value="2024-12-30">
+          <label for="quarterSelect">Select a quarter</label>
+          <select id="quarterSelect"></select>
         </div>
-        <div class="field">
-          <label>Length (weeks)</label>
-          <input type="number" id="weeksLength" value="13" min="4" max="13">
+        <div class="field" style="margin-bottom:0;">
+          <div id="quarterInfo" style="font-size:12px; color:var(--forest-mid); line-height:1.5;"></div>
         </div>
       </div>
-    </div>
 
-    <div class="panel-section">
-      <span class="panel-label">03 — Coverage Targets</span>
-      <div class="field-row">
-        <div class="field"><label>Day — total / RN min</label><input type="number" id="dayTotal" value="8"></div>
-        <div class="field"><label>&nbsp;</label><input type="number" id="dayRN" value="5"></div>
-      </div>
-      <div class="field-row">
-        <div class="field"><label>Evening — total / RN min</label><input type="number" id="eveTotal" value="5"></div>
-        <div class="field"><label>&nbsp;</label><input type="number" id="eveRN" value="3"></div>
-      </div>
-      <div class="field-row">
-        <div class="field"><label>Night — total / RN min</label><input type="number" id="nightTotal" value="3"></div>
-        <div class="field"><label>&nbsp;</label><input type="number" id="nightRN" value="2"></div>
-      </div>
-    </div>
+      <!-- Roster period is now implied by the selected quarter (always 13 weeks) —
+           kept as hidden fields so the rest of the script doesn't need to change. -->
+      <input type="hidden" id="startDate" value="2024-12-30">
+      <input type="hidden" id="weeksLength" value="13">
 
-    <div class="panel-section">
-      <span class="panel-label">04 — Solver Preferences</span>
-      <div class="field">
-        <label>Fairness weight <span class="value-readout" id="fairnessVal">500</span> DKK / shift-deviation</label>
-        <input type="range" id="fairnessWeight" min="0" max="1500" step="50" value="500">
+      <div class="panel-section">
+        <span class="panel-label">Coverage Targets</span>
+        <div class="field-row">
+          <div class="field"><label>Day — total / RN min</label><input type="number" id="dayTotal" value="8"></div>
+          <div class="field"><label>&nbsp;</label><input type="number" id="dayRN" value="5"></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label>Evening — total / RN min</label><input type="number" id="eveTotal" value="5"></div>
+          <div class="field"><label>&nbsp;</label><input type="number" id="eveRN" value="3"></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label>Night — total / RN min</label><input type="number" id="nightTotal" value="3"></div>
+          <div class="field"><label>&nbsp;</label><input type="number" id="nightRN" value="2"></div>
+        </div>
       </div>
-      <div class="field">
-        <label>Contracted-hours tolerance <span class="value-readout" id="tolVal">15</span>%</label>
-        <input type="range" id="tolerance" min="5" max="25" step="1" value="15">
-      </div>
-    </div>
 
-    <button class="generate-btn" id="generateBtn" disabled>Generate Roster</button>
+      <div class="panel-section">
+        <span class="panel-label">Solver Preferences</span>
+        <div class="field">
+          <label>Fairness weight <span class="value-readout" id="fairnessVal">500</span> DKK / shift-deviation</label>
+          <input type="range" id="fairnessWeight" min="0" max="1500" step="50" value="500">
+        </div>
+        <div class="field">
+          <label>Contracted-hours tolerance <span class="value-readout" id="tolVal">15</span>%</label>
+          <input type="range" id="tolerance" min="5" max="25" step="1" value="15">
+        </div>
+      </div>
+
+      <button class="generate-btn" id="generateBtn" disabled>Generate Roster</button>
+
+    </div>
 
     <div class="demo-note">
       Demo mode: this draft computes a placeholder roster client-side so the
@@ -344,7 +344,7 @@
       for a call to your hosted JuMP/HiGHS API once it's deployed.
     </div>
 
-  </aside>
+  </div>
 
   <!-- ================= OUTPUT ================= -->
   <main class="output-area">
