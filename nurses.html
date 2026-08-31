@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nurse Population — Ward Staffing Planner</title>
+<link rel="preconnect" href="https://api.fontshare.com">
+<link href="https://api.fontshare.com/v2/css?f[]=open-sauce-sans@400,500,600,700,800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header>
+  <div>
+    <span class="eyebrow">13-Week Roster &middot; General Ward</span>
+    <h1>Ward Staffing Planner</h1>
+  </div>
+  <div class="sub">Portfolio case study</div>
+</header>
+
+<nav class="site-nav">
+  <a href="index.html">1. Case Study</a>
+  <a href="nurses.html" class="active">2. Nurse Population</a>
+  <a href="model.html">3. Run Model</a>
+  <a href="impact.html">4. Employee Impact</a>
+  <a href="schedule.html">5. Shift Schedule</a>
+</nav>
+
+<main class="prose-page">
+  <h2>Nurse Population</h2>
+  <p class="page-intro">
+    All 30 nurses are generated once and reused across every quarter &mdash; a
+    ward's staff doesn't turn over every 13 weeks. What <em>does</em> change
+    per quarter is each nurse's vacation pattern, since different times of
+    year fall in different Danish holiday seasons (see the reasoning below).
+  </p>
+
+  <div class="prose-section">
+    <h3>At a glance</h3>
+    <div class="param-summary-grid" id="statGrid"></div>
+  </div>
+
+  <div class="prose-section">
+    <h3>Full population</h3>
+    <p style="font-size:12px; color:var(--forest-mid); margin-bottom:10px;">
+      Click a column header to sort.
+    </p>
+    <div class="table-wrap">
+      <table class="data-table" id="nurseTable">
+        <thead>
+          <tr>
+            <th data-key="nurse_id">ID</th>
+            <th data-key="role">Role</th>
+            <th data-key="contract_pct">Contract %</th>
+            <th data-key="night_eligible">Night Eligible</th>
+            <th data-key="years_experience">Years Exp.</th>
+            <th data-key="shift_preference">Preference</th>
+            <th data-key="contracted_weekly_hours">Weekly Hours</th>
+            <th data-key="hourly_wage_dkk">Wage (DKK/hr)</th>
+          </tr>
+        </thead>
+        <tbody id="nurseTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="prose-section">
+    <h3>How this population was generated</h3>
+    <p>
+      Every distribution below is either grounded in a real source or clearly
+      flagged as a modeling assumption &mdash; that distinction matters more
+      than the specific numbers.
+    </p>
+
+    <div class="assumption-box">
+      <strong>Role split (60% RN / 40% SoSu)</strong>
+      <span class="tag assumption" style="margin-left:6px;">Assumption</span><br>
+      A modeling assumption for typical general-ward composition. Worth
+      comparing against the evidence-based recommendation from an actual 2023
+      EU-funded Danish hospital study: at least 80% RN to 20% healthcare
+      assistant. This population's 60:40 split sits notably below that
+      benchmark &mdash; a real, acknowledged gap rather than a match.
+    </div>
+
+    <div class="assumption-box">
+      <strong>Contract % distribution (100%: 45%, 80%: 20%, 70%: 15%, 50%: 15%, 30%: 5%)</strong>
+      <span class="tag assumption" style="margin-left:6px;">Assumption</span><br>
+      Informed by DSR/Danske Regioner reporting that roughly half of nurses
+      work part-time, but the specific bracket weights are a modeling choice.
+    </div>
+
+    <div class="assumption-box">
+      <strong>Night eligibility, conditioned on contract %</strong>
+      <span class="tag assumption" style="margin-left:6px;">Assumption</span><br>
+      Probability of being night-eligible ranges from 80% (full-time) down to
+      15% (30% contract), plus a +10pp bump for SoSu. The overall
+      ~1/3-non-participation figure is sourced from OK-24 commentary; the
+      contract-based gradient and role bump are modeling choices layered on
+      top of that real anchor.
+    </div>
+
+    <div class="assumption-box">
+      <strong>Seniority (years of experience)</strong>
+      <span class="tag assumption" style="margin-left:6px;">Assumption</span><br>
+      Drawn from a Beta(2,5) distribution scaled to 0&ndash;25 years &mdash;
+      right-skewed toward early/mid-career, reflecting a typical ward's age
+      structure. Not sourced to a specific dataset.
+    </div>
+
+    <div class="assumption-box">
+      <strong>Vacation clustering, per quarter</strong>
+      <span class="tag sourced" style="margin-left:6px;">Partially sourced</span><br>
+      Each quarter has its own seasonal "boost window" where vacation-day
+      sampling probability is multiplied up: winter (vinterferie, ISO week 7),
+      spring (real 2025 Easter dates, plus a pre-summer ramp-up), summer (peak
+      sommerferie plus efter&aring;rsferie), and autumn/winter (Christmas, using
+      verified 2025 dates). The holiday <em>dates</em> are real and confirmed;
+      the specific boost <em>multipliers</em> (2&ndash;4x) are modeling
+      assumptions.
+    </div>
+  </div>
+
+</main>
+
+<script src="shared.js"></script>
+<script>
+const nurses = parseCSV(NURSE_PROFILES_CSV);
+
+// --- Summary stats ---
+const rnCount = nurses.filter(n => n.role === "RN").length;
+const sosuCount = nurses.filter(n => n.role === "SoSu").length;
+const nightEligibleCount = nurses.filter(n => n.night_eligible === "Yes").length;
+const avgExperience = nurses.reduce((s, n) => s + n.years_experience, 0) / nurses.length;
+const avgWage = nurses.reduce((s, n) => s + n.hourly_wage_dkk, 0) / nurses.length;
+const fullTimeCount = nurses.filter(n => n.contract_pct === 100).length;
+
+const stats = [
+  { label: "Total nurses", value: nurses.length },
+  { label: "RN / SoSu", value: `${rnCount} / ${sosuCount}` },
+  { label: "Night eligible", value: `${nightEligibleCount} (${Math.round(100*nightEligibleCount/nurses.length)}%)` },
+  { label: "Full-time (100%)", value: `${fullTimeCount} (${Math.round(100*fullTimeCount/nurses.length)}%)` },
+  { label: "Avg. years experience", value: avgExperience.toFixed(1) },
+  { label: "Avg. hourly wage", value: `${avgWage.toFixed(0)} DKK` },
+];
+document.getElementById("statGrid").innerHTML = stats.map(s => `
+  <div class="param-summary-item">
+    <div class="label">${s.label}</div>
+    <div class="value">${s.value}</div>
+  </div>`).join("");
+
+// --- Table rendering with click-to-sort ---
+let sortKey = "nurse_id";
+let sortAsc = true;
+
+function renderTable() {
+  const sorted = [...nurses].sort((a, b) => {
+    let av = a[sortKey], bv = b[sortKey];
+    if (typeof av === "string") { av = av.toLowerCase(); bv = bv.toLowerCase(); }
+    if (av < bv) return sortAsc ? -1 : 1;
+    if (av > bv) return sortAsc ? 1 : -1;
+    return 0;
+  });
+
+  document.getElementById("nurseTableBody").innerHTML = sorted.map(n => `
+    <tr>
+      <td>${n.nurse_id}</td>
+      <td><span class="role-pill ${n.role === 'RN' ? 'rn' : 'sosu'}">${n.role}</span></td>
+      <td>${n.contract_pct}%</td>
+      <td>${n.night_eligible}</td>
+      <td>${n.years_experience.toFixed(1)}</td>
+      <td>${n.shift_preference}</td>
+      <td>${n.contracted_weekly_hours.toFixed(1)}h</td>
+      <td>${n.hourly_wage_dkk.toFixed(2)}</td>
+    </tr>`).join("");
+
+  document.querySelectorAll("#nurseTable th").forEach(th => {
+    th.innerHTML = th.textContent.replace(" ▲", "").replace(" ▼", "");
+    if (th.dataset.key === sortKey) {
+      th.innerHTML += `<span class="sort-arrow">${sortAsc ? "▲" : "▼"}</span>`;
+    }
+  });
+}
+
+document.querySelectorAll("#nurseTable th").forEach(th => {
+  th.addEventListener("click", () => {
+    const key = th.dataset.key;
+    if (sortKey === key) { sortAsc = !sortAsc; } else { sortKey = key; sortAsc = true; }
+    renderTable();
+  });
+});
+
+renderTable();
+</script>
+
+</body>
+</html>

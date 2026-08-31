@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Run Model — Ward Staffing Planner</title>
+<link rel="preconnect" href="https://api.fontshare.com">
+<link href="https://api.fontshare.com/v2/css?f[]=open-sauce-sans@400,500,600,700,800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header>
+  <div>
+    <span class="eyebrow">13-Week Roster &middot; General Ward</span>
+    <h1>Ward Staffing Planner</h1>
+  </div>
+  <div class="sub">Portfolio case study</div>
+</header>
+
+<nav class="site-nav">
+  <a href="index.html">1. Case Study</a>
+  <a href="nurses.html">2. Nurse Population</a>
+  <a href="model.html" class="active">3. Run Model</a>
+  <a href="impact.html">4. Employee Impact</a>
+  <a href="schedule.html">5. Shift Schedule</a>
+</nav>
+
+<div class="layout">
+
+  <!-- ================= CONTROL PANEL (horizontal parameter bar) ================= -->
+  <div class="control-panel">
+
+    <div class="param-row">
+
+      <div class="panel-section">
+        <span class="panel-label">Yearly Quarters</span>
+        <div class="field">
+          <label for="quarterSelect">Select a quarter</label>
+          <select id="quarterSelect"></select>
+        </div>
+        <div class="field" style="margin-bottom:0;">
+          <div id="quarterInfo" style="font-size:12px; color:var(--forest-mid); line-height:1.5;"></div>
+        </div>
+      </div>
+
+      <!-- Roster period is now implied by the selected quarter (always 13 weeks) —
+           kept as hidden fields so the rest of the script doesn't need to change. -->
+      <input type="hidden" id="startDate" value="2024-12-30">
+      <input type="hidden" id="weeksLength" value="13">
+
+      <div class="panel-section">
+        <span class="panel-label">Coverage Targets</span>
+        <div class="field-row">
+          <div class="field"><label>Day — total / RN min</label><input type="number" id="dayTotal" value="8"></div>
+          <div class="field"><label>&nbsp;</label><input type="number" id="dayRN" value="5"></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label>Evening — total / RN min</label><input type="number" id="eveTotal" value="5"></div>
+          <div class="field"><label>&nbsp;</label><input type="number" id="eveRN" value="3"></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label>Night — total / RN min</label><input type="number" id="nightTotal" value="3"></div>
+          <div class="field"><label>&nbsp;</label><input type="number" id="nightRN" value="2"></div>
+        </div>
+      </div>
+
+      <div class="panel-section">
+        <span class="panel-label">Solver Preferences</span>
+        <div class="field">
+          <label>Fairness weight <span class="value-readout" id="fairnessVal">500</span> DKK / shift-deviation</label>
+          <input type="range" id="fairnessWeight" min="0" max="1500" step="50" value="500">
+        </div>
+        <div class="field">
+          <label>Contracted-hours tolerance <span class="value-readout" id="tolVal">15</span>%</label>
+          <input type="range" id="tolerance" min="5" max="25" step="1" value="15">
+        </div>
+      </div>
+
+      <button class="generate-btn" id="generateBtn" disabled>Generate Roster</button>
+
+    </div>
+
+    <div class="demo-note">
+      Demo mode: this draft computes a placeholder roster client-side so the
+      dashboard is reviewable without a live backend. Swap <code>generateRoster()</code>
+      for a call to your hosted JuMP/HiGHS API once it's deployed.
+    </div>
+
+  </div>
+
+  <!-- ================= OUTPUT ================= -->
+  <main class="output-area">
+    <div class="output-header">
+      <h2>Generated Roster</h2>
+      <span class="status-badge" id="statusBadge">Awaiting input</span>
+    </div>
+
+    <div id="emptyState" class="empty-state">
+      <h3>No roster generated yet</h3>
+      <p>Upload ward data, set coverage targets and solver preferences on the left, then generate a roster to see cost, coverage compliance and staffing risk here.</p>
+    </div>
+
+    <div id="results" style="display:none;">
+
+      <div class="kpi-grid" id="kpiGrid"></div>
+
+      <div class="grid-2">
+        <div class="panel-box">
+          <h3>Assigned Shifts per Week</h3>
+          <div class="subhead">Day / Evening / Night, across the roster period</div>
+          <canvas id="shiftsChart" height="220"></canvas>
+        </div>
+        <div class="panel-box">
+          <h3>Coverage Compliance</h3>
+          <div class="subhead">Share of shifts meeting the RN minimum, by shift type</div>
+          <canvas id="complianceChart" height="220"></canvas>
+        </div>
+      </div>
+
+      <div class="panel-box">
+        <h3>Staffing Risk — Lookahead</h3>
+        <div class="subhead">Estimated probability of falling below minimum coverage, by shift</div>
+        <div class="horizon-tabs" id="horizonTabs">
+          <button type="button" class="horizon-tab active" data-horizon="7">1 week</button>
+          <button type="button" class="horizon-tab" data-horizon="14">2 weeks</button>
+          <button type="button" class="horizon-tab" data-horizon="30">1 month</button>
+          <button type="button" class="horizon-tab" data-horizon="45">45 days</button>
+        </div>
+        <div id="riskContainer"></div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<footer>
+  Portfolio draft — rosters generated here use placeholder logic, not a live optimization run.
+  Coverage targets and labor rules are modeled after published Danish overenskomst terms; no
+  real hospital or employee data is used.
+</footer>
+
+<script src="shared.js"></script>
+<script>
+let wardData = null;
+let vacationData = null;
+let currentQuarterId = 1;
+let charts = {};
+let currentHorizon = 7;
+
+function parseCSV(text) {
+  const lines = text.trim().split(/\r?\n/);
+  const headers = lines[0].split(",").map(h => h.trim());
+  return lines.slice(1).filter(l => l.length).map(line => {
+    const cells = line.split(",").map(c => c.trim());
+    const row = {};
+    headers.forEach((h, i) => { row[h] = isNaN(Number(cells[i])) ? cells[i] : Number(cells[i]); });
+    return row;
+  });
+}
+
+function populateQuarterDropdown() {
+  const select = document.getElementById("quarterSelect");
+  select.innerHTML = QUARTERS.map(s => `<option value="${s.id}">${s.label}</option>`).join("");
+}
+
+function loadQuarter(quarterId) {
+  const sc = QUARTERS.find(s => s.id === quarterId);
+  currentQuarterId = quarterId;
+  wardData = parseCSV(NURSE_PROFILES_CSV);
+  vacationData = parseCSV(VACATION_CSV_BY_QUARTERS[quarterId]);
+
+  document.getElementById("quarterSelect").value = quarterId;
+  document.getElementById("quarterInfo").textContent =
+    `${sc.start_date} → ${sc.end_date} · ${wardData.length} nurses · ${vacationData.length} vacation-days on file`;
+  document.getElementById("startDate").value = sc.start_date;
+  document.getElementById("weeksLength").value = 13;
+  document.getElementById("generateBtn").disabled = false;
+}
+
+document.getElementById("quarterSelect").addEventListener("change", (e) => {
+  loadQuarter(Number(e.target.value));
+});
+
+document.getElementById("fairnessWeight").addEventListener("input", (e) => {
+  document.getElementById("fairnessVal").textContent = e.target.value;
+});
+document.getElementById("tolerance").addEventListener("input", (e) => {
+  document.getElementById("tolVal").textContent = e.target.value;
+});
+
+document.querySelectorAll(".horizon-tab").forEach(tab => {
+  tab.addEventListener("click", () => {
+    document.querySelectorAll(".horizon-tab").forEach(t => t.classList.remove("active"));
+    tab.classList.add("active");
+    currentHorizon = Number(tab.dataset.horizon);
+    if (wardData && document.getElementById("results").style.display !== "none") {
+      renderRisk(currentHorizon);
+    }
+  });
+});
+
+function readInputs() {
+  return {
+    startDate: document.getElementById("startDate").value,
+    weeks: Number(document.getElementById("weeksLength").value),
+    coverage: {
+      day: { total: Number(document.getElementById("dayTotal").value), rn: Number(document.getElementById("dayRN").value) },
+      evening: { total: Number(document.getElementById("eveTotal").value), rn: Number(document.getElementById("eveRN").value) },
+      night: { total: Number(document.getElementById("nightTotal").value), rn: Number(document.getElementById("nightRN").value) },
+    },
+    fairnessWeight: Number(document.getElementById("fairnessWeight").value),
+    tolerancePct: Number(document.getElementById("tolerance").value),
+    wardData: wardData,
+    vacationData: vacationData,
+  };
+}
+
+// ---------------------------------------------------------------------
+// MOCK roster generation — placeholder only, see header comment above.
+// Vacation load is factored into RN supply so switching scenarios
+// actually changes the compliance/cost numbers, not just cosmetically.
+// ---------------------------------------------------------------------
+function MOCK_generateRoster(inputs) {
+  const { coverage, weeks, wardData, vacationData, fairnessWeight, tolerancePct } = inputs;
+  const rnCount = wardData.filter(n => n.role === "RN").length;
+  const totalCount = wardData.length;
+  const nightEligible = wardData.filter(n => n.night_eligible === "Yes").length;
+
+  const weeklySlots = (coverage.day.total + coverage.evening.total + coverage.night.total) * 7;
+  const baseCost = weeklySlots * weeks * 220; // placeholder blended wage
+  const totalCost = baseCost * (1 + fairnessWeight / 5000);
+
+  const rnIds = new Set(wardData.filter(n => n.role === "RN").map(n => n.nurse_id));
+  const rnVacationDays = vacationData.filter(v => rnIds.has(v.nurse_id)).length;
+  // rough fraction of RN person-days lost to vacation across the scenario window
+  const vacationLoad = Math.min(0.35, rnVacationDays / (rnCount * weeks * 7));
+
+  const rnDemandPerDay = coverage.day.rn + coverage.evening.rn + coverage.night.rn;
+  const rnSupplyHoursPerWeek = wardData.filter(n => n.role === "RN")
+    .reduce((s, n) => s + (n.contracted_weekly_hours || 0), 0) * (1 - vacationLoad);
+  const rnDemandHoursPerWeek = rnDemandPerDay * 7 * 8;
+  const rnPressure = rnDemandHoursPerWeek / (rnSupplyHoursPerWeek * (1 + tolerancePct / 100));
+
+  const complianceDay = Math.max(60, Math.min(100, 100 - (rnPressure - 1) * 80));
+  const complianceEve = Math.max(55, complianceDay - 6);
+  const complianceNight = Math.max(45, complianceDay - 14 - (coverage.night.rn > nightEligible / 4 ? 10 : 0));
+
+  const weeklyShifts = [];
+  for (let w = 1; w <= weeks; w++) {
+    const jitter = () => 0.9 + Math.random() * 0.2;
+    weeklyShifts.push({
+      week: w,
+      day: Math.round(coverage.day.total * 7 * jitter()),
+      evening: Math.round(coverage.evening.total * 7 * jitter()),
+      night: Math.round(coverage.night.total * 7 * jitter()),
+    });
+  }
+
+  return {
+    kpis: {
+      totalCost, totalShifts: weeklySlots * weeks,
+      avgWeeklyHours: (weeklySlots * 8 * weeks) / (totalCount * weeks),
+      rnCount, totalCount, nightEligible,
+      complianceDay, complianceEve, complianceNight,
+      solveTimeSec: 0.3 + Math.random() * 0.4,
+      fairnessDeviation: Math.max(0.4, 3 - fairnessWeight / 600),
+    },
+    weeklyShifts,
+    riskByHorizon: {
+      7:  [{shift:"Day", risk:8},{shift:"Evening", risk:14},{shift:"Night", risk:Math.round(100-complianceNight)}],
+      14: [{shift:"Day", risk:13},{shift:"Evening", risk:21},{shift:"Night", risk:Math.round((100-complianceNight)*1.3)}],
+      30: [{shift:"Day", risk:19},{shift:"Evening", risk:29},{shift:"Night", risk:Math.min(95,Math.round((100-complianceNight)*1.6))}],
+      45: [{shift:"Day", risk:24},{shift:"Evening", risk:34},{shift:"Night", risk:Math.min(97,Math.round((100-complianceNight)*1.8))}],
+    }
+  };
+}
+
+function fmt(n, d=1){ return Number(n).toLocaleString("en-GB",{minimumFractionDigits:d,maximumFractionDigits:d}); }
+
+function renderKPIs(k) {
+  const cards = [
+    { label:"Total cost", value:fmt(k.totalCost,0), unit:"DKK" },
+    { label:"Total shifts", value:k.totalShifts, unit:"" },
+    { label:"Avg weekly hours / nurse", value:fmt(k.avgWeeklyHours,1), unit:"h" },
+    { label:"Ward size", value:`${k.rnCount} RN / ${k.totalCount - k.rnCount} SoSu`, unit:"" },
+    { label:"Day coverage compliance", value:fmt(k.complianceDay,1), unit:"%", cls:"blue" },
+    { label:"Evening coverage compliance", value:fmt(k.complianceEve,1), unit:"%", cls:"blue" },
+    { label:"Night coverage compliance", value:fmt(k.complianceNight,1), unit:"%", cls:"blue" },
+    { label:"Fairness deviation (avg)", value:fmt(k.fairnessDeviation,2), unit:"shifts", cls:"tan" },
+    { label:"Solve time", value:fmt(k.solveTimeSec,2), unit:"s" },
+  ];
+  document.getElementById("kpiGrid").innerHTML = cards.map(c => `
+    <div class="kpi-card">
+      <div class="kpi-label">${c.label}</div>
+      <div class="kpi-value ${c.cls||''}">${c.value}<span class="kpi-unit">${c.unit}</span></div>
+    </div>`).join("");
+}
+
+function renderShiftsChart(weeklyShifts) {
+  const ctx = document.getElementById("shiftsChart");
+  if (charts.shifts) charts.shifts.destroy();
+  charts.shifts = new Chart(ctx, {
+    type: "bar",
+    data: {
+      labels: weeklyShifts.map(w => `W${w.week}`),
+      datasets: [
+        { label:"Day", data: weeklyShifts.map(w=>w.day), backgroundColor:"#53C688" },
+        { label:"Evening", data: weeklyShifts.map(w=>w.evening), backgroundColor:"#7BB2E0" },
+        { label:"Night", data: weeklyShifts.map(w=>w.night), backgroundColor:"#2A2E9D" },
+      ]
+    },
+    options: {
+      plugins:{ legend:{ labels:{ color:"#183017", font:{family:"Open Sauce Sans", size:11} } } },
+      scales:{
+        x:{ stacked:true, ticks:{color:"#51A24E", font:{family:"Open Sauce Sans"}}, grid:{display:false} },
+        y:{ stacked:true, ticks:{color:"#51A24E", font:{family:"Open Sauce Sans"}}, grid:{color:"rgba(24,48,23,0.10)"} },
+      }
+    }
+  });
+}
+
+function renderComplianceChart(k) {
+  const ctx = document.getElementById("complianceChart");
+  if (charts.compliance) charts.compliance.destroy();
+  charts.compliance = new Chart(ctx, {
+    type: "doughnut",
+    data: {
+      labels: ["Day","Evening","Night"],
+      datasets: [{
+        data: [k.complianceDay, k.complianceEve, k.complianceNight],
+        backgroundColor: ["#53C688","#7BB2E0","#2A2E9D"],
+        borderWidth: 0
+      }]
+    },
+    options: {
+      plugins:{ legend:{ position:"bottom", labels:{ color:"#183017", font:{family:"Open Sauce Sans", size:11} } } }
+    }
+  });
+}
+
+let lastResult = null;
+function renderRisk(horizon) {
+  const rows = lastResult.riskByHorizon[horizon];
+  const colorFor = (risk) => risk < 15 ? "#53C688" : risk < 30 ? "#B98355" : "#7BB2E0";
+  document.getElementById("riskContainer").innerHTML = rows.map(r => `
+    <div class="risk-row">
+      <div class="risk-label"><span>${r.shift}</span><span>${r.risk}% breach risk</span></div>
+      <div class="risk-bar-track"><div class="risk-bar-fill" style="width:${r.risk}%; background:${colorFor(r.risk)};"></div></div>
+    </div>`).join("");
+}
+
+document.getElementById("generateBtn").addEventListener("click", async () => {
+  const btn = document.getElementById("generateBtn");
+  const badge = document.getElementById("statusBadge");
+  btn.disabled = true; btn.textContent = "Solving...";
+  badge.textContent = "Solving"; badge.className = "status-badge";
+
+  const inputs = readInputs();
+  await new Promise(r => setTimeout(r, 400));
+  const response = await fetch(`results_Q${currentQuarterId}.json`);
+  const real = await response.json();
+  lastResult = {
+    kpis: real.kpis,
+    weeklyShifts: real.weeklyShifts,
+    riskByHorizon: MOCK_generateRoster(inputs).riskByHorizon,  // simulation layer not built yet — stays mock
+  };
+
+  document.getElementById("emptyState").style.display = "none";
+  document.getElementById("results").style.display = "block";
+
+  renderKPIs(lastResult.kpis);
+  renderShiftsChart(lastResult.weeklyShifts);
+  renderComplianceChart(lastResult.kpis);
+  renderRisk(currentHorizon);
+
+  badge.textContent = "Roster ready (demo data)";
+  badge.classList.add("ready");
+  btn.disabled = false; btn.textContent = "Generate Roster";
+});
+
+// Auto-load sample ward data on first visit
+populateQuarterDropdown();
+loadQuarter(1);
+
+</script>
+</body>
+</html>
