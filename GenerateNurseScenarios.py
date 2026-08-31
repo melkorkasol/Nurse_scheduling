@@ -30,8 +30,8 @@ SEED = 42
 rng = np.random.default_rng(SEED)
 
 N_NURSES = 30
-N_RN = 18
-N_SOSU = 12
+N_RN = 24
+N_SOSU = 6
 
 SCENARIO_START = dt.date(2024, 12, 30)  # Monday, ISO week 1 of 2025
 WEEKS_PER_SCENARIO = 13

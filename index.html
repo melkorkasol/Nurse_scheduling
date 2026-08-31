@@ -47,10 +47,10 @@
       programming, solved with the open-source HiGHS solver via Julia's JuMP.
     </p>
     <div class="param-summary-grid">
-      <div class="param-summary-item"><div class="label">Ward size</div><div class="value">30 nurses</div></div>
+      <div class="param-summary-item"><div class="label">Department size</div><div class="value">30 nurses</div></div>
       <div class="param-summary-item"><div class="label">Roster length</div><div class="value">13 weeks</div></div>
       <div class="param-summary-item"><div class="label">Shift types</div><div class="value">Day / Evening / Night</div></div>
-      <div class="param-summary-item"><div class="label">Roles</div><div class="value">18 RN / 12 SoSu</div></div>
+      <div class="param-summary-item"><div class="label">Roles</div><div class="value">24 Nurses / 6 Healthcare Assistant</div></div>
       <div class="param-summary-item"><div class="label">Coverage target</div><div class="value">8 / 5 / 3 per shift</div></div>
       <div class="param-summary-item"><div class="label">Solver</div><div class="value">HiGHS (MILP)</div></div>
     </div>
@@ -87,14 +87,14 @@
     <h3>Cost and wages <span class="tag sourced">Sourced</span></h3>
     <p>
       Every nurse has their own hourly wage, driven by role and years of
-      experience &mdash; not a single flat rate per role. RN wages follow real
+      experience &mdash; not a single flat rate per role. Nurses wages follow real
       DSR grundl&oslash;n-by-anciennitet l&oslash;ntrin steps (25,382.67
       kr./month newly graduated, rising to 30,738.99 kr./month at 10 years,
-      extrapolated beyond that on the same slope). SoSu wages are pinned to the
+      extrapolated beyond that on the same slope). Healtcare Assistant (hereafter reffered to as "HA") wages are pinned to the
       same curve shape at a fixed ratio (78%), since no equivalent
       tillæg-free anciennitet table could be found for that role &mdash;
       mixing bases from different sources was tested and rejected after it
-      produced an unrealistic result where SoSu pay could overtake RN pay at
+      produced an unrealistic result where HA pay could overtake nurses pay at
       high seniority.
     </p>
     <p>
@@ -120,8 +120,8 @@
       quarter" portfolio framing.
     </div>
     <div class="assumption-box">
-      <strong>RN headcount runs close to its coverage limit.</strong>
-      The RN coverage rule demands more RN-hours per week than the 18 RNs'
+      <strong>Nurse headcount runs close to its coverage limit.</strong>
+      The nurse coverage rule demands more nurse-hours per week than the 24 nurses'
       contracted hours alone can supply. A &plusmn;15% overtime tolerance band
       is what makes the model feasible. Anything below approximately 12% tolerance
       is mathematically infeasible regardless of solver settings.
