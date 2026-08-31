@@ -74,13 +74,13 @@
     </p>
 
     <div class="assumption-box">
-      <strong>Role split (60% RN / 40% SoSu)</strong>
-      <span class="tag assumption" style="margin-left:6px;">Assumption</span><br>
-      A modeling assumption for typical general-ward composition. Worth
-      comparing against the evidence-based recommendation from an actual 2023
-      EU-funded Danish hospital study: at least 80% RN to 20% healthcare
-      assistant. This population's 60:40 split sits notably below that
-      benchmark &mdash; a real, acknowledged gap rather than a match.
+      <strong>Role split (80% Nurses / 20% HA)</strong>
+      <span class="tag sourced" style="margin-left:6px;">Sourced</span><br>
+      This matches the evidence-based recommendation confirmed in a 2023
+      EU-funded Danish hospital study (Regionshospitalet Gødstrup, Central
+      Denmark Region): at least 80% nurses to 20% healthcare assistants,
+      citing Griffiths (2019) — above a certain threshold, higher shares of
+      healthcare assistants have measurably harmful effects on patient care.
     </div>
 
     <div class="assumption-box">
@@ -94,7 +94,7 @@
       <strong>Night eligibility, conditioned on contract %</strong>
       <span class="tag assumption" style="margin-left:6px;">Assumption</span><br>
       Probability of being night-eligible ranges from 80% (full-time) down to
-      15% (30% contract), plus a +10pp bump for SoSu. The overall
+      15% (30% contract), plus a +10pp bump for HA. The overall
       ~1/3-non-participation figure is sourced from OK-24 commentary; the
       contract-based gradient and role bump are modeling choices layered on
       top of that real anchor.
@@ -136,8 +136,8 @@ const avgWage = nurses.reduce((s, n) => s + n.hourly_wage_dkk, 0) / nurses.lengt
 const fullTimeCount = nurses.filter(n => n.contract_pct === 100).length;
 
 const stats = [
-  { label: "Total nurses", value: nurses.length },
-  { label: "RN / SoSu", value: `${rnCount} / ${sosuCount}` },
+  { label: "Total staff", value: nurses.length },
+  { label: "Nurses / HA", value: `${rnCount} / ${sosuCount}` },
   { label: "Night eligible", value: `${nightEligibleCount} (${Math.round(100*nightEligibleCount/nurses.length)}%)` },
   { label: "Full-time (100%)", value: `${fullTimeCount} (${Math.round(100*fullTimeCount/nurses.length)}%)` },
   { label: "Avg. years experience", value: avgExperience.toFixed(1) },
